@@ -4,11 +4,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from .ingestion import run_ingestion
+from ingestion import run_ingestion
 
 load_dotenv()
 
 CHROMA_PATH = "chroma_db"
+COLLECTION_NAME = "rag_docs"
 DATA_DIR = "data/documents"
 
 
@@ -50,7 +51,8 @@ def index_documents(reset=False):
         documents=chunks,
         embedding=embeddings,
         ids=chunk_ids,
-        persist_directory=CHROMA_PATH
+        persist_directory=CHROMA_PATH,
+        collection_name=COLLECTION_NAME,
     )
 
     print(f"Indexed {len(chunks)} chunks successfully")
