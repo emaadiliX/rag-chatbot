@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from ingestion import run_ingestion
+from .ingestion import run_ingestion
 
 load_dotenv()
 
