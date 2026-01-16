@@ -5,158 +5,156 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import streamlit as st
+from app.styles import CUSTOM_CSS
+from app.source_links import PDF_URLS
+from rag.retrieval import get_vector_db
 from rag.prompting import ask, IDK_FALLBACK
 
+
+@st.cache_resource(show_spinner=False)
+def warm_up_vector_db():
+    try:
+        get_vector_db()
+        return True
+    except FileNotFoundError:
+        return False
+
+
 st.set_page_config(
-    page_title="Banking RAG Assistant",
-    page_icon="",
+    page_title="FinWise RAG Chat",
+    page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-st.markdown(
-    """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-
-    .stApp { background: #f8fafc; }
-    .main .block-container { max-width: 900px; padding: 2rem 1.5rem; }
-
-    .main-header {
-        text-align: center;
-        padding: 2rem 0 2.5rem 0;
-        border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 2rem;
-    }
-    .main-header h1 {
-        color: #0f172a;
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
-    }
-    .main-header p { color: #64748b; font-size: 1rem; font-weight: 400; }
-
-    .source-card {
-        background: #f1f5f9;
-        border-left: 3px solid #3b82f6;
-        padding: 0.75rem 1rem;
-        border-radius: 0 8px 8px 0;
-        margin: 0.5rem 0;
-        font-size: 0.875rem;
-        color: #334155;
-    }
-    .source-card strong { color: #0f172a; }
-
-    section[data-testid="stSidebar"] {
-        background: #ffffff;
-        border-right: 1px solid #e2e8f0;
-    }
-    section[data-testid="stSidebar"] .stMarkdown h2 {
-        color: #0f172a;
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-    section[data-testid="stSidebar"] .stMarkdown p {
-        color: #475569;
-        font-size: 0.875rem;
-        line-height: 1.6;
-    }
-    section[data-testid="stSidebar"] hr {
-        margin: 1.5rem 0;
-        border-color: #e2e8f0;
-    }
-
-    .no-answer {
-        background: #fef2f2;
-        border-left: 3px solid #ef4444;
-        padding: 1rem 1.25rem;
-        border-radius: 0 12px 12px 0;
-        color: #991b1b;
-        font-size: 0.95rem;
-    }
-
-    hr { border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
-    h3 { color: #0f172a; font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
-
-    [data-testid="stMetricValue"] { color: #0f172a; font-size: 1.5rem; font-weight: 700; }
-    [data-testid="stMetricLabel"] { color: #64748b; font-size: 0.875rem; font-weight: 500; }
-
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-</style>
-""",
-    unsafe_allow_html=True,
-)
+db_ready = warm_up_vector_db()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "total_queries" not in st.session_state:
-    st.session_state.total_queries = 0
-
 if "settings" not in st.session_state:
-    st.session_state.settings = {"k": 5, "use_mmr": False}
+    st.session_state.settings = {"k": 5}
 
-st.markdown(
-    """
-<div class="main-header">
-    <h1>Banking RAG Assistant</h1>
-    <p>Ask questions about Basel III, capital requirements, and banking regulations</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+if "pending_question" not in st.session_state:
+    st.session_state.pending_question = None
+
 
 with st.sidebar:
-    st.markdown("---")
-    st.markdown("## About")
-    st.markdown(
-        """
-This assistant answers questions using a curated knowledge base of banking and financial regulatory documents.
+    st.markdown('<p class="sidebar-label">ABOUT</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <p class="sidebar-text">
+        This assistant answers questions using a curated knowledge base of banking and financial regulatory documents.
+    </p>
+    """, unsafe_allow_html=True)
 
-**Features:**
-- Grounded answers with citations
-- Source document references
-- Safe "I don't know" responses
-"""
-    )
-    st.markdown("---")
-    st.session_state.settings["k"] = st.slider(
-        "Number of sources to retrieve",
-        min_value=3,
+    st.markdown('<p class="sidebar-label">CAPABILITIES</p>',
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div class="capability-item">
+        <span class="capability-dot"></span>
+        <span class="capability-text">Grounded answers with citations</span>
+    </div>
+    <div class="capability-item">
+        <span class="capability-dot"></span>
+        <span class="capability-text">Source document references</span>
+    </div>
+    <div class="capability-item">
+        <span class="capability-dot"></span>
+        <span class="capability-text">Safe "I don't know" responses</span>
+    </div>
+    <div style="margin-bottom: 1.5rem;"></div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<p class="sidebar-label">SETTINGS</p>',
+                unsafe_allow_html=True)
+
+    k = st.session_state.settings["k"]
+    st.markdown(f"""
+    <div class="slider-label-row">
+        <span class="slider-label-text">Number of sources</span>
+        <span class="slider-value">{k}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.slider(
+        "Number of sources",
+        min_value=1,
         max_value=10,
-        value=st.session_state.settings["k"],
-        help="More sources = more comprehensive but slower",
+        value=k,
+        key="k_slider",
+        label_visibility="collapsed",
     )
+    st.session_state.settings["k"] = st.session_state.k_slider
 
+    st.markdown("""
+    <div class="settings-range">
+        <span>MIN: 1</span>
+        <span>MAX: 10</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    if st.button("🗑️ Clear Chat", use_container_width=True):
+    st.markdown("<div style='flex-grow: 1;'></div>", unsafe_allow_html=True)
+    if st.button("🗑  Clear conversation", use_container_width=True):
         st.session_state.messages = []
-        st.session_state.total_queries = 0
+        st.session_state.pending_question = None
         st.rerun()
 
-def render_sources(sources: list[str]) -> None:
+
+st.markdown("""
+<div class="main-header">
+    <div class="header-icon">🏛️</div>
+    <h1>FinWise RAG Chat</h1>
+    <p>Interrogate banking regulations and financial disclosures with enterprise-grade precision.</p>
+</div>
+""", unsafe_allow_html=True)
+
+
+def parse_source_string(s):
+    s = s.strip()
+    if "(" in s and s.endswith(")"):
+        left, right = s.rsplit("(", 1)
+        filename = left.strip()
+        page_part = right[:-1].strip()
+        return filename, page_part
+    return s, ""
+
+
+def render_sources(sources):
     if not sources:
         return
-    with st.expander(f"📚 View {len(sources)} source(s)", expanded=False):
-        for i, s in enumerate(sources, 1):
-            st.markdown(
-                f"""
-<div class="source-card">
-    <strong>Source {i}:</strong> {s}
-</div>
-""",
-                unsafe_allow_html=True,
-            )
+
+    with st.expander(f"📎 View sources ({len(sources)})", expanded=False):
+        for s in sources:
+            filename, page_part = parse_source_string(s)
+            url = PDF_URLS.get(filename)
+            page_badge = page_part.capitalize() if page_part else ""
+            icon = "picture_as_pdf" if url else "description"
+
+            if url:
+                title_html = f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="source-title">{filename}</a>'
+            else:
+                title_html = f'<span class="source-title">{filename}</span>'
+
+            page_span = f'<span class="source-page">{page_badge}</span>' if page_badge else ''
+
+            st.markdown(f"""
+            <div class="source-card">
+                <div class="source-icon">
+                    <span class="material-icons-round">{icon}</span>
+                </div>
+                <div class="source-info">
+                    <div class="source-info-header">
+                        {title_html}
+                        {page_span}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
-def type_out_markdown(target_placeholder, full_text: str, speed: float = 0.002) -> None:
-
+def type_out_markdown(target_placeholder, full_text, speed=0.0015):
     buf = ""
     for ch in full_text:
         buf += ch
@@ -164,85 +162,156 @@ def type_out_markdown(target_placeholder, full_text: str, speed: float = 0.002) 
         time.sleep(speed)
 
 
-def handle_question(question: str) -> None:
+def render_user_message(content):
+    st.markdown(f"""
+    <div class="user-message-wrapper">
+        <div class="user-message-header">
+            <span class="user-label">You</span>
+            <div class="user-avatar">
+                <span class="material-icons-round">person</span>
+            </div>
+        </div>
+        <div class="user-message">{content}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_assistant_message(content, sources=None, animate=False, placeholder=None):
+    if animate and placeholder:
+        type_out_markdown(placeholder, content)
+    else:
+        st.markdown(f"""
+        <div class="assistant-message-wrapper">
+            <div class="assistant-message-header">
+                <div class="assistant-avatar">
+                    <span class="material-icons-round">auto_awesome</span>
+                </div>
+                <span class="assistant-label">FinWise AI</span>
+            </div>
+            <div class="assistant-message">
+                <div class="assistant-message-content">{content}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if sources:
+        render_sources(sources)
+
+
+def handle_question(question):
     k = st.session_state.settings["k"]
-    use_mmr = st.session_state.settings["use_mmr"]
 
     st.session_state.messages.append({"role": "user", "content": question})
 
-    with st.chat_message("user"):
-        st.markdown(question)
+    render_user_message(question)
+    st.markdown("""
+    <div class="assistant-message-wrapper">
+        <div class="assistant-message-header">
+            <div class="assistant-avatar">
+                <span class="material-icons-round">auto_awesome</span>
+            </div>
+            <span class="assistant-label">Assistant</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with st.chat_message("assistant"):
-        status = st.empty()
-        answer_box = st.empty()
+    answer_box = st.empty()
 
-        status.markdown("⏳ Retrieving relevant passages…")
+    try:
+        answer_box.markdown("""
+        <div class="thinking-indicator">
+            <span class="thinking-dot"></span>
+            <span class="thinking-text">Searching knowledge base...</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-        try:
-            result = ask(question, k=k, use_mmr=use_mmr)
+        result = ask(question, k=k, use_mmr=True)
 
-            status.markdown("✅ Generating answer…")
+        answer_text = result.get("answer", IDK_FALLBACK)
+        sources = result.get("sources", [])
 
-            answer_text = result.get("answer", IDK_FALLBACK)
-            sources = result.get("sources", [])
+        if IDK_FALLBACK in answer_text:
+            answer_box.markdown(
+                f'<div class="no-answer">🤷 {answer_text}</div>', unsafe_allow_html=True)
+        else:
+            type_out_markdown(answer_box, answer_text, speed=0.002)
 
-            if IDK_FALLBACK in answer_text:
-                answer_box.markdown(f'<div class="no-answer">🤷 {answer_text}</div>', unsafe_allow_html=True)
-            else:
-                type_out_markdown(answer_box, answer_text, speed=0.0015)
-                render_sources(sources)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": answer_text, "sources": sources}
+        )
 
-            status.empty()
+        render_sources(sources)
 
-            st.session_state.messages.append(
-                {"role": "assistant", "content": answer_text, "sources": sources}
-            )
-            st.session_state.total_queries += 1
-
-        except FileNotFoundError:
-            status.empty()
-            msg = "I couldn't access the document database. Please run indexing first."
-            answer_box.markdown(f'<div class="no-answer">🤷 {msg}</div>', unsafe_allow_html=True)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": msg, "sources": []}
-            )
-        except Exception:
-            status.empty()
-            msg = "Sorry, I encountered an error while processing your question."
-            answer_box.markdown(f'<div class="no-answer">🤷 {msg}</div>', unsafe_allow_html=True)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": msg, "sources": []}
-            )
+    except FileNotFoundError:
+        msg = "I couldn't access the document database. Please run indexing first."
+        answer_box.markdown(
+            f'<div class="no-answer">🤷 {msg}</div>', unsafe_allow_html=True)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": msg, "sources": []})
+    except Exception:
+        msg = "Sorry, I encountered an error while processing your question."
+        answer_box.markdown(
+            f'<div class="no-answer">🤷 {msg}</div>', unsafe_allow_html=True)
+        st.session_state.messages.append(
+            {"role": "assistant", "content": msg, "sources": []})
 
     st.rerun()
 
 
+if st.session_state.pending_question:
+    q = st.session_state.pending_question
+    st.session_state.pending_question = None
+    handle_question(q)
+
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if msg["role"] == "assistant" and IDK_FALLBACK in msg["content"]:
-            st.markdown(f'<div class="no-answer">🤷 {msg["content"]}</div>', unsafe_allow_html=True)
+    if msg["role"] == "user":
+        render_user_message(msg["content"])
+    else:
+        if IDK_FALLBACK in msg["content"]:
+            st.markdown(f"""
+            <div class="assistant-message-wrapper">
+                <div class="assistant-message-header">
+                    <div class="assistant-avatar">
+                        <span class="material-icons-round">auto_awesome</span>
+                    </div>
+                    <span class="assistant-label">FinWise AI</span>
+                </div>
+                <div class="no-answer">🤷 {msg["content"]}</div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.markdown(msg["content"])
-        if msg["role"] == "assistant":
-            render_sources(msg.get("sources", []))
+            render_assistant_message(msg["content"], msg.get("sources", []))
+st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("---")
+if not st.session_state.messages:
+    st.markdown("""
+    <div class="examples-section">
+        <div class="examples-title">Try these examples</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-user_input = st.chat_input("Ask a question...")
+    examples = [
+        "What are the Basel III capital requirements?",
+        "What is the capital conservation buffer?",
+        "What are the minimum CET1 requirements?",
+    ]
+
+    cols = st.columns(3)
+    for col, example in zip(cols, examples):
+        with col:
+            if st.button(example, key=f"example_{example[:20]}", use_container_width=True):
+                st.session_state.pending_question = example
+                st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+user_input = st.chat_input("Ask FinWise about your documents...")
+st.markdown("""
+<div class="input-footer">
+    <span class="material-icons-round">lock</span>
+    <span>Encrypted & Confidential.</span>
+</div>
+""", unsafe_allow_html=True)
 
 if user_input and user_input.strip():
     handle_question(user_input.strip())
-
-st.markdown("##### 💡 Try these examples:")
-example_cols = st.columns(3)
-examples = [
-    "What are the Basel III capital requirements?",
-    "What is the capital conservation buffer?",
-    "What are the minimum CET1 requirements?",
-]
-
-for col, example in zip(example_cols, examples):
-    with col:
-        if st.button(example, key=f"example_{example[:24]}", use_container_width=True):
-            handle_question(example)

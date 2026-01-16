@@ -7,10 +7,10 @@ load_dotenv()
 
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
+RELEVANCE_THRESHOLD = 0.7
 
 
 class VectorStoreManager:
-    """Singleton to ensure vector DB is only loaded once."""
     _instance = None
     _db = None
 
@@ -43,36 +43,42 @@ def get_vector_db():
 
 
 def retrieve_context(query, k=5, use_mmr=False):
-    """
-    Retrieve top-K relevant chunks for a query.
-
-    Args:
-        query: User question
-        k: Number of chunks to retrieve
-        use_mmr: Use MMR for diversity
-
-    Returns:
-        List of (document, score) tuples
-    """
     db = get_vector_db()
 
     if use_mmr:
-        docs = db.max_marginal_relevance_search(query, k=k, fetch_k=k*3)
-        return [(doc, None) for doc in docs]
+        candidates = db.similarity_search_with_score(query, k=k * 3)
 
-    return db.similarity_search_with_score(query, k=k)
+        relevant_docs = [(doc, score) for doc, score in candidates
+                         if score <= RELEVANCE_THRESHOLD]
+
+        if not relevant_docs:
+            return []
+
+        docs_for_mmr = [doc for doc, _ in relevant_docs]
+        score_map = {doc.page_content: score for doc, score in relevant_docs}
+
+        mmr_docs = db.max_marginal_relevance_search(
+            query,
+            k=min(k, len(docs_for_mmr)),
+            fetch_k=len(docs_for_mmr)
+        )
+
+        results = []
+        for doc in mmr_docs:
+            if doc.page_content in score_map:
+                results.append((doc, score_map[doc.page_content]))
+
+        return results[:k]
+
+    results = db.similarity_search_with_score(query, k=k)
+
+    filtered = [(doc, score)
+                for doc, score in results if score <= RELEVANCE_THRESHOLD]
+
+    return filtered
 
 
 def format_retrieved_context(results):
-    """
-    Format chunks into context string with proper source numbering.
-
-    Args:
-        results: List of (document, score) tuples
-
-    Returns:
-        tuple: (context_string, citations_list)
-    """
     if not results:
         return "", []
 
@@ -84,13 +90,12 @@ def format_retrieved_context(results):
     for doc, score in results:
         content = doc.page_content.strip()
 
-        # Skip duplicates
         if content in seen_content:
             continue
         seen_content.add(content)
 
         source_doc = doc.metadata.get("source", "Unknown")
-        page_num = doc.metadata.get("page", "?")
+        page_num = doc.metadata.get("page", 0) + 1
 
         context_parts.append(
             f"[Source {source_num}: {source_doc}, Page {page_num}]\n{content}"
@@ -118,6 +123,7 @@ if __name__ == "__main__":
 
     print(f"Found {len(citations)} relevant chunks:\n")
     for i, cit in enumerate(citations, 1):
-        print(f"{i}. {cit['source']} (page {cit['page']})")
+        score_str = f" (relevance: {cit['score']:.3f})" if cit['score'] is not None else ""
+        print(f"{i}. {cit['source']} (page {cit['page']}){score_str}")
 
     print(f"\nContext preview:\n{context[:300]}...")

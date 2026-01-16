@@ -1,14 +1,9 @@
-import os
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-def load_pdfs(data_dir: str = "data/documents") -> list:
-    """
-    Load all PDFs from the data directory.
-    Returns a list of Document objects with page content and metadata.
-    """
+def load_pdfs(data_dir="data/documents"):
     documents = []
     data_path = Path(data_dir)
 
@@ -40,35 +35,15 @@ def load_pdfs(data_dir: str = "data/documents") -> list:
     return documents
 
 
-def clean_text(text: str) -> str:
-    """
-    Clean extracted text by removing extra whitespace and PDF artifacts.
-    """
+def clean_text(text):
     text = " ".join(text.split())
-
-    artifacts = [
-        "Page |",
-        "| Page",
-        "\x00",  # Null characters
-    ]
+    artifacts = ["Page |", "| Page", "\x00"]
     for artifact in artifacts:
         text = text.replace(artifact, "")
-
     return text.strip()
 
 
-def chunk_documents(documents: list, chunk_size: int = 1000, chunk_overlap: int = 200) -> list:
-    """
-    Split documents into smaller chunks for embedding.
-
-    Args:
-        documents: List of Document objects from load_pdfs()
-        chunk_size: Target size of each chunk in characters
-        chunk_overlap: Overlap between chunks to preserve context
-
-    Returns:
-        List of chunked Document objects
-    """
+def chunk_documents(documents, chunk_size=1500, chunk_overlap=150):
     for doc in documents:
         doc.page_content = clean_text(doc.page_content)
 
@@ -83,28 +58,25 @@ def chunk_documents(documents: list, chunk_size: int = 1000, chunk_overlap: int 
 
     chunks = splitter.split_documents(documents)
 
-    for i, chunk in enumerate(chunks):
-        chunk.metadata["chunk_id"] = i
+    source_chunk_counters = {}
+    for chunk in chunks:
+        source = chunk.metadata.get("source", "unknown")
+
+        if source not in source_chunk_counters:
+            source_chunk_counters[source] = 0
+
+        chunk.metadata["chunk_id"] = source_chunk_counters[source]
+        source_chunk_counters[source] += 1
 
     print(f"Created {len(chunks)} chunks from {len(documents)} pages")
     return chunks
 
 
-def run_ingestion(data_dir: str = "data/documents") -> list:
-    """
-    Run the full ingestion pipeline.
-
-    Args:
-        data_dir: Path to folder containing PDFs
-
-    Returns:
-        List of chunks ready for embedding
-    """
+def run_ingestion(data_dir="data/documents"):
     print("Starting ingestion...")
     print("=" * 50)
 
     documents = load_pdfs(data_dir)
-
     chunks = chunk_documents(documents)
 
     print("=" * 50)
@@ -116,9 +88,9 @@ def run_ingestion(data_dir: str = "data/documents") -> list:
 if __name__ == "__main__":
     chunks = run_ingestion()
 
-    # Preview first chunk
     if chunks:
         print("\n--- Sample Chunk ---")
         print(f"Source: {chunks[0].metadata['source']}")
         print(f"Page: {chunks[0].metadata.get('page', 'N/A')}")
+        print(f"Chunk ID: {chunks[0].metadata.get('chunk_id', 'N/A')}")
         print(f"Content preview: {chunks[0].page_content[:300]}...")
