@@ -43,6 +43,7 @@ A Retrieval-Augmented Generation chatbot for banking/financial documents.
 ```bash
 python -m rag.indexing
 ```
+This creates the vector database from your PDFs. It only needs to run once and takes approximately 10-15 minutes depending on the number of documents. The database is saved locally and reused on subsequent runs.
 
 ### 2. Launch the chatbot
 ```bash

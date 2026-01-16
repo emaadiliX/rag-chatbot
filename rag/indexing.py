@@ -12,10 +12,10 @@ load_dotenv()
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
 DATA_DIR = "data/documents"
-BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "500"))
+BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "1000"))
 
 
-def _db_exists():
+def db_exists():
     return (
         os.path.isdir(CHROMA_PATH)
         and os.path.exists(os.path.join(CHROMA_PATH, "chroma.sqlite3"))
@@ -28,15 +28,6 @@ def clear_database():
         print("Cleared existing database")
 
 
-def create_embeddings():
-    return OpenAIEmbeddings(
-        model="text-embedding-3-small",
-        chunk_size=BATCH_SIZE,
-        max_retries=3,
-        show_progress_bar=True,
-    )
-
-
 def get_chunk_id(chunk):
     source = chunk.metadata.get("source", "unknown")
     page = chunk.metadata.get("page", 0)
@@ -45,9 +36,9 @@ def get_chunk_id(chunk):
 
 
 def index_documents(reset=False):
-    start_total = time.time()
+    start_time = time.time()
 
-    if not reset and _db_exists():
+    if not reset and db_exists():
         print("Vector database already exists. Skipping indexing.")
         print("Run with reset=True to rebuild.")
         return None
@@ -57,21 +48,24 @@ def index_documents(reset=False):
 
     print("Loading and chunking documents...")
     chunks = run_ingestion(DATA_DIR)
-    total_chunks = len(chunks)
+    total = len(chunks)
 
-    print(f"Creating embeddings for {total_chunks} chunks (batch size: {BATCH_SIZE})...")
+    print(f"Indexing {total} chunks (batch size: {BATCH_SIZE})...")
 
-    embeddings = create_embeddings()
-    chunk_ids = [get_chunk_id(chunk) for chunk in chunks]
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        chunk_size=BATCH_SIZE,
+    )
+
+    chunk_ids = [get_chunk_id(c) for c in chunks]
 
     db = None
-    for i in range(0, total_chunks, BATCH_SIZE):
-        batch_end = min(i + BATCH_SIZE, total_chunks)
+    for i in range(0, total, BATCH_SIZE):
+        batch_end = min(i + BATCH_SIZE, total)
         batch_chunks = chunks[i:batch_end]
         batch_ids = chunk_ids[i:batch_end]
 
-        progress = (batch_end / total_chunks) * 100
-        print(f"Processing batch {i // BATCH_SIZE + 1}: chunks {i + 1}-{batch_end} ({progress:.1f}%)")
+        print(f"Processing {i+1}-{batch_end} of {total}...")
 
         if db is None:
             db = Chroma.from_documents(
@@ -84,11 +78,11 @@ def index_documents(reset=False):
         else:
             db.add_documents(documents=batch_chunks, ids=batch_ids)
 
-    total_time = time.time() - start_total
-    minutes = int(total_time // 60)
-    seconds = int(total_time % 60)
+    elapsed = time.time() - start_time
+    mins = int(elapsed // 60)
+    secs = int(elapsed % 60)
 
-    print(f"Indexing complete. {total_chunks} chunks indexed in {minutes}m {seconds}s.")
+    print(f"Done! {total} chunks indexed in {mins}m {secs}s.")
     return db
 
 
