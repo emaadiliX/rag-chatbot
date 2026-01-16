@@ -7,7 +7,7 @@ load_dotenv()
 
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
-RELEVANCE_THRESHOLD = 0.7
+RELEVANCE_THRESHOLD = 1.5
 
 
 class VectorStoreManager:
