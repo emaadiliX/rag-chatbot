@@ -206,6 +206,8 @@ def render_assistant_message(content, sources=None):
 def handle_question(question):
     k = st.session_state.k_slider
 
+    chat_history = list(st.session_state.messages)
+
     st.session_state.messages.append({"role": "user", "content": question})
 
     render_user_message(question)
@@ -230,7 +232,7 @@ def handle_question(question):
         </div>
         """, unsafe_allow_html=True)
 
-        result = ask(question, k=k)
+        result = ask(question, k=k, chat_history=chat_history)
 
         answer_text = result.get("answer", IDK_FALLBACK)
         sources = result.get("sources", [])

@@ -101,21 +101,64 @@ def process_citations(answer, all_citations):
     return clean_answer.strip(), sources, used_citations
 
 
-def generate_answer(question, context):
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT),
-        ("user", USER_PROMPT),
-    ])
+def generate_answer(question, context, chat_history=None):
+    """
+    Generate an answer using the LLM.
 
-    messages = prompt.format_messages(context=context, question=question)
+    chat_history: list of {"role": "user"/"assistant", "content": "..."}
+    We include the last few exchanges so the LLM can understand follow-up questions.
+    """
+    messages = [("system", SYSTEM_PROMPT)]
+
+    if chat_history:
+        recent = chat_history[-6:]
+        for msg in recent:
+            role = "human" if msg["role"] == "user" else "ai"
+            messages.append((role, msg["content"]))
+
+    user_message = USER_PROMPT.format(context=context, question=question)
+    messages.append(("human", user_message))
 
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
-
     response = llm.invoke(messages)
     return str(response.content)
 
 
-def ask(question, k=5):
+def expand_query(question, chat_history):
+    """
+    For follow-up questions, add context from the last question
+    so retrieval can find relevant chunks.
+    """
+    if not chat_history:
+        return question
+
+    followup_patterns = [
+        r"\b(it|its|this|that|these|those|they|them)\b",
+        r"^(what|how|why|tell me) (about|more)",
+        r"^(and|also|additionally)\b",
+    ]
+
+    is_followup = any(re.search(p, question.lower())
+                      for p in followup_patterns)
+
+    if not is_followup:
+        return question
+
+    for msg in reversed(chat_history):
+        if msg["role"] == "user":
+            expanded = f"{msg['content']} {question}"
+            print(f"[Query Expansion] '{question}' -> '{expanded}'")
+            return expanded
+
+    return question
+
+
+def ask(question, k=5, chat_history=None):
+    """
+    Main function to answer a question.
+
+    chat_history: optional list of previous messages for conversation context
+    """
     if has_injection(question):
         return {
             "answer": "I'm sorry, I cannot process this request.",
@@ -124,7 +167,8 @@ def ask(question, k=5):
             "num_sources": 0
         }
 
-    results = retrieve_context(question, k=k)
+    search_query = expand_query(question, chat_history)
+    results = retrieve_context(search_query, k=k)
     if not results:
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 
@@ -132,7 +176,7 @@ def ask(question, k=5):
     if not context:
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 
-    answer = generate_answer(question, context)
+    answer = generate_answer(question, context, chat_history)
     answer, sources, used_citations = process_citations(answer, all_citations)
 
     return {
