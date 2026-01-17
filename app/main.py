@@ -1,25 +1,13 @@
-import streamlit as st
 import sys
-import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-
-# Dynamic imports to prevent reordering
-_rag_retrieval = __import__("rag.retrieval", fromlist=["get_vector_db"])
-_rag_prompting = __import__("rag.prompting", fromlist=["ask", "IDK_FALLBACK"])
-_app_styles = __import__("app.styles", fromlist=["CUSTOM_CSS"])
-_app_source_links = __import__("app.source_links", fromlist=["PDF_URLS"])
-
-get_vector_db = _rag_retrieval.get_vector_db
-ask = _rag_prompting.ask
-IDK_FALLBACK = _rag_prompting.IDK_FALLBACK
-CUSTOM_CSS = _app_styles.CUSTOM_CSS
-PDF_URLS = _app_source_links.PDF_URLS
-
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import time  # noqa: E402
+import streamlit as st  # noqa: E402
+from rag.retrieval import get_vector_db  # noqa: E402
+from rag.prompting import ask, IDK_FALLBACK  # noqa: E402
+from app.styles import CUSTOM_CSS  # noqa: E402
+from app.source_links import PDF_URLS  # noqa: E402
 
 
 @st.cache_resource(show_spinner=False)

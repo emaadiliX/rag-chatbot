@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -10,7 +11,25 @@ CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
 RELEVANCE_THRESHOLD = 1.0
 
-# Global caches
+UNSAFE_PATTERNS = [
+    r"ignore (all|any|previous|above) instructions",
+    r"system prompt",
+    r"override",
+    r"forget your",
+    r"new instructions",
+    r"jailbreak",
+    r"developer mode",
+    r"\bDAN\b",
+]
+
+
+def is_safe_content(text):
+    """Check if document content is safe (no injection patterns)."""
+    if not text:
+        return True
+    return not any(re.search(p, text, flags=re.IGNORECASE) for p in UNSAFE_PATTERNS)
+
+
 _cached_db = None
 _cached_reranker = None
 
@@ -51,18 +70,15 @@ def rerank_results(query, docs_with_scores, top_k=5):
 
     reranker = get_reranker()
 
-    # Prepare pairs of (query, document_text) for the cross-encoder
     pairs = [(query, doc.page_content) for doc, _ in docs_with_scores]
 
-    # Get new relevance scores from cross-encoder (higher = more relevant)
     rerank_scores = reranker.predict(pairs)
 
-    # Combine docs with their new scores and sort by rerank score (descending)
     reranked = list(zip(docs_with_scores, rerank_scores))
     reranked.sort(key=lambda x: x[1], reverse=True)
 
-    # Return top_k results with rerank score
-    results = [(doc, float(rerank_score)) for (doc, _), rerank_score in reranked[:top_k]]
+    results = [(doc, float(rerank_score))
+               for (doc, _), rerank_score in reranked[:top_k]]
 
     return results
 
@@ -70,17 +86,16 @@ def rerank_results(query, docs_with_scores, top_k=5):
 def retrieve_context(query, k=5):
     db = get_vector_db()
 
-    # Fetch more candidates for reranking
     initial_results = db.similarity_search_with_score(query, k=k * 3)
 
-    # Filter by threshold first
-    filtered = [(doc, score) for doc, score in initial_results
-                if score <= RELEVANCE_THRESHOLD]
+    filtered = [
+        (doc, score) for doc, score in initial_results
+        if score <= RELEVANCE_THRESHOLD and is_safe_content(doc.page_content)
+    ]
 
     if not filtered:
         return []
 
-    # Rerank the filtered results
     reranked = rerank_results(query, filtered, top_k=k)
 
     return reranked
