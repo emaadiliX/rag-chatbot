@@ -86,7 +86,7 @@ def rerank_results(query, docs_with_scores, top_k=5):
 def retrieve_context(query, k=5):
     db = get_vector_db()
 
-    initial_results = db.similarity_search_with_score(query, k=k * 3)
+    initial_results = db.similarity_search_with_score(query, k=k * 2)
 
     filtered = [
         (doc, score) for doc, score in initial_results

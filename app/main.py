@@ -4,16 +4,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # noqa: E402
 
 import time  # noqa: E402
 import streamlit as st  # noqa: E402
-from rag.retrieval import get_vector_db  # noqa: E402
+from rag.retrieval import get_vector_db, get_reranker  # noqa: E402
 from rag.prompting import ask, IDK_FALLBACK  # noqa: E402
 from app.styles import CUSTOM_CSS  # noqa: E402
 from app.source_links import PDF_URLS  # noqa: E402
 
 
 @st.cache_resource(show_spinner=False)
-def warm_up_vector_db():
+def warm_up_models():
     try:
         get_vector_db()
+        get_reranker()
         return True
     except FileNotFoundError:
         return False
@@ -28,7 +29,7 @@ st.set_page_config(
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-db_ready = warm_up_vector_db()
+db_ready = warm_up_models()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
