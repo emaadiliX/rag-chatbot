@@ -37,16 +37,15 @@ Answer:
 """
 
 
-def _looks_like_prompt_injection(text):
+def is_prompt_injection(text):
+    """Check if the text contains common prompt injection patterns."""
     if not text:
         return False
+
     patterns = [
         r"ignore (all|any|previous) instructions",
         r"system prompt",
-        r"developer message",
-        r"you are chatgpt",
-        r"reveal.*(prompt|policy|instructions)",
-        r"do not follow",
+        r"reveal.*(prompt|instructions)",
         r"override",
         r"forget your",
         r"new instructions",
@@ -55,66 +54,42 @@ def _looks_like_prompt_injection(text):
     return any(re.search(p, text, flags=re.IGNORECASE) for p in patterns)
 
 
-def _build_sources_list(citations):
-    if not citations:
-        return []
+def process_citations(answer, all_citations):
+    """
+    Extract which sources the LLM actually used, build a clean sources list,
+    and remove citation markers from the answer text.
+    """
+    used_nums = {int(n) for n in re.findall(r'\[Source (\d+)\]', answer)}
+
+    used_citations = [
+        all_citations[n - 1] for n in sorted(used_nums)
+        if 1 <= n <= len(all_citations)
+    ]
 
     source_pages = {}
-    for c in citations:
+    for c in used_citations:
         src = c.get("source", "Unknown")
         page = c.get("page", 1)
-
         if src not in source_pages:
             source_pages[src] = set()
         source_pages[src].add(page)
 
     sources = []
     for src, pages in source_pages.items():
-        sorted_pages = sorted(pages)
-        if len(sorted_pages) == 1:
-            sources.append(f"{src} (page {sorted_pages[0]})")
+        pages_sorted = sorted(pages)
+        if len(pages_sorted) == 1:
+            sources.append(f"{src} (page {pages_sorted[0]})")
         else:
-            pages_str = ", ".join(str(p) for p in sorted_pages)
-            sources.append(f"{src} (pages {pages_str})")
+            sources.append(
+                f"{src} (pages {', '.join(map(str, pages_sorted))})")
 
-    return sources
+    clean_answer = re.sub(r'\[Source \d+\]', '', answer)
+    # collapse multiple spaces
+    clean_answer = re.sub(r'  +', ' ', clean_answer)
+    # fix spacing before punctuation
+    clean_answer = re.sub(r' ([.,;:])', r'\1', clean_answer)
 
-
-def _extract_used_citation_numbers(answer):
-    pattern = r'\[Source (\d+)\]'
-    matches = re.findall(pattern, answer)
-    return {int(n) for n in matches}
-
-
-def _validate_citations(answer, num_sources):
-    def replace_citation(match):
-        n = int(match.group(1))
-        if 1 <= n <= num_sources:
-            return match.group(0)
-        return ""
-
-    pattern = r'\[Source (\d+)\]'
-    return re.sub(pattern, replace_citation, answer)
-
-
-def _filter_used_citations(citations, used_numbers):
-    if not used_numbers:
-        return []
-
-    used_citations = []
-    for num in sorted(used_numbers):
-        if 1 <= num <= len(citations):
-            used_citations.append(citations[num - 1])
-
-    return used_citations
-
-
-def _remove_citations_from_answer(answer):
-    pattern = r'\[Source \d+\]'
-    cleaned = re.sub(pattern, '', answer)
-    cleaned = re.sub(r'  +', ' ', cleaned)
-    cleaned = re.sub(r' ([.,;:])', r'\1', cleaned)
-    return cleaned.strip()
+    return clean_answer.strip(), sources, used_citations
 
 
 def generate_answer(question, context):
@@ -132,9 +107,9 @@ def generate_answer(question, context):
 
 
 def ask(question, k=5):
-    if _looks_like_prompt_injection(question):
+    if is_prompt_injection(question):
         return {
-            "answer": "I'm sorry, I cannot process this request as it contains potentially unsafe instructions.",
+            "answer": "I'm sorry, I cannot process this request.",
             "sources": [],
             "citations": [],
             "num_sources": 0
@@ -145,16 +120,11 @@ def ask(question, k=5):
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 
     context, all_citations = format_retrieved_context(results)
-    if not context or not all_citations:
+    if not context:
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 
     answer = generate_answer(question, context)
-
-    answer = _validate_citations(answer, len(all_citations))
-    used_numbers = _extract_used_citation_numbers(answer)
-    used_citations = _filter_used_citations(all_citations, used_numbers)
-    sources = _build_sources_list(used_citations)
-    answer = _remove_citations_from_answer(answer)
+    answer, sources, used_citations = process_citations(answer, all_citations)
 
     return {
         "answer": answer,

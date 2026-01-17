@@ -17,7 +17,7 @@ PDF_URLS: dict[str, str] = {
 
     "morganstanley_annual_report_2024.pdf":
         "https://www.morganstanley.com/content/dam/msdotcom/en/about-us-ir/pdf/MSESE_Annual_Report_2024.pdf",
-        
+
     "jpmorgan_annual_report_2023.pdf":
         "https://www.jpmorganchase.com/content/dam/jpmc/jpmorgan-chase-and-co/investor-relations/documents/annualreport-2023.pdf",
 
@@ -104,4 +104,8 @@ PDF_URLS: dict[str, str] = {
 
     "ffiec_bsa_aml_manual.pdf":
         "https://www.ffiec.gov/press/pdf/FFIEC%20BSA-AML%20Exam%20Manual.pdf",
+
+    "ffiec_bsa_aml_manual_private_banking.pdf":
+        "https://bsaaml.ffiec.gov/docs/manual/06_AssessingComplianceWithBSARegulatoryRequirements/11.pdf",
+
 }
