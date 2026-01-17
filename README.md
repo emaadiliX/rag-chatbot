@@ -57,3 +57,8 @@ streamlit run app/main.py
 - **Vector DB**: ChromaDB
 - **Framework**: LangChain
 - **UI**: Streamlit
+
+## Note on Citations
+
+Cited page numbers reflect PDF page positions, which may differ by a few pages
+from printed page numbers in some documents.

@@ -43,7 +43,7 @@ def clean_text(text):
     return text.strip()
 
 
-def chunk_documents(documents, chunk_size=1500, chunk_overlap=150):
+def chunk_documents(documents, chunk_size=1500, chunk_overlap=100):
     for doc in documents:
         doc.page_content = clean_text(doc.page_content)
 
@@ -56,10 +56,13 @@ def chunk_documents(documents, chunk_size=1500, chunk_overlap=150):
         separators=["\n\n", "\n", ". ", " ", ""]
     )
 
-    chunks = splitter.split_documents(documents)
+    all_chunks = []
+    for doc in documents:
+        page_chunks = splitter.split_documents([doc])
+        all_chunks.extend(page_chunks)
 
     source_chunk_counters = {}
-    for chunk in chunks:
+    for chunk in all_chunks:
         source = chunk.metadata.get("source", "unknown")
 
         if source not in source_chunk_counters:
@@ -68,8 +71,8 @@ def chunk_documents(documents, chunk_size=1500, chunk_overlap=150):
         chunk.metadata["chunk_id"] = source_chunk_counters[source]
         source_chunk_counters[source] += 1
 
-    print(f"Created {len(chunks)} chunks from {len(documents)} pages")
-    return chunks
+    print(f"Created {len(all_chunks)} chunks from {len(documents)} pages")
+    return all_chunks
 
 
 def run_ingestion(data_dir="data/documents"):

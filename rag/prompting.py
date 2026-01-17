@@ -1,7 +1,6 @@
 import re
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
 
 from .retrieval import retrieve_context, format_retrieved_context
 
@@ -147,7 +146,6 @@ def expand_query(question, chat_history):
     for msg in reversed(chat_history):
         if msg["role"] == "user":
             expanded = f"{msg['content']} {question}"
-            print(f"[Query Expansion] '{question}' -> '{expanded}'")
             return expanded
 
     return question
