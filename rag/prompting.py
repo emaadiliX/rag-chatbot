@@ -131,7 +131,7 @@ def generate_answer(question, context):
     return str(response.content)
 
 
-def ask(question, k=5, use_mmr=False):
+def ask(question, k=5):
     if _looks_like_prompt_injection(question):
         return {
             "answer": "I'm sorry, I cannot process this request as it contains potentially unsafe instructions.",
@@ -140,7 +140,7 @@ def ask(question, k=5, use_mmr=False):
             "num_sources": 0
         }
 
-    results = retrieve_context(question, k=k, use_mmr=use_mmr)
+    results = retrieve_context(question, k=k)
     if not results:
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 
@@ -166,6 +166,6 @@ def ask(question, k=5, use_mmr=False):
 
 if __name__ == "__main__":
     q = "What are the Basel III capital requirements?"
-    result = ask(q, k=4, use_mmr=False)
+    result = ask(q, k=4)
     print(f"Question: {q}\n")
     print("Answer:\n" + result["answer"])

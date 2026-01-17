@@ -2,80 +2,88 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
-RELEVANCE_THRESHOLD = 1.5
+RELEVANCE_THRESHOLD = 1.0
 
-
-class VectorStoreManager:
-    _instance = None
-    _db = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def get_db(self):
-        if self._db is None:
-            if not os.path.exists(CHROMA_PATH):
-                raise FileNotFoundError(
-                    f"Vector database not found at {CHROMA_PATH}. "
-                    "Run indexing.py first."
-                )
-
-            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-            self._db = Chroma(
-                collection_name=COLLECTION_NAME,
-                persist_directory=CHROMA_PATH,
-                embedding_function=embeddings
-            )
-
-        return self._db
+# Global caches
+_cached_db = None
+_cached_reranker = None
 
 
 def get_vector_db():
-    manager = VectorStoreManager()
-    return manager.get_db()
+    global _cached_db
 
+    if _cached_db is None:
+        if not os.path.exists(CHROMA_PATH):
+            raise FileNotFoundError(
+                f"Vector database not found at {CHROMA_PATH}. "
+                "Run indexing.py first."
+            )
 
-def retrieve_context(query, k=5, use_mmr=False):
-    db = get_vector_db()
-
-    if use_mmr:
-        candidates = db.similarity_search_with_score(query, k=k * 3)
-
-        relevant_docs = [(doc, score) for doc, score in candidates
-                         if score <= RELEVANCE_THRESHOLD]
-
-        if not relevant_docs:
-            return []
-
-        docs_for_mmr = [doc for doc, _ in relevant_docs]
-        score_map = {doc.page_content: score for doc, score in relevant_docs}
-
-        mmr_docs = db.max_marginal_relevance_search(
-            query,
-            k=min(k, len(docs_for_mmr)),
-            fetch_k=len(docs_for_mmr)
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        _cached_db = Chroma(
+            collection_name=COLLECTION_NAME,
+            persist_directory=CHROMA_PATH,
+            embedding_function=embeddings
         )
 
-        results = []
-        for doc in mmr_docs:
-            if doc.page_content in score_map:
-                results.append((doc, score_map[doc.page_content]))
+    return _cached_db
 
-        return results[:k]
 
-    results = db.similarity_search_with_score(query, k=k)
+def get_reranker():
+    global _cached_reranker
 
-    filtered = [(doc, score)
-                for doc, score in results if score <= RELEVANCE_THRESHOLD]
+    if _cached_reranker is None:
+        _cached_reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
-    return filtered
+    return _cached_reranker
+
+
+def rerank_results(query, docs_with_scores, top_k=5):
+    """Re-score documents using a cross-encoder for better relevance ranking."""
+    if not docs_with_scores:
+        return []
+
+    reranker = get_reranker()
+
+    # Prepare pairs of (query, document_text) for the cross-encoder
+    pairs = [(query, doc.page_content) for doc, _ in docs_with_scores]
+
+    # Get new relevance scores from cross-encoder (higher = more relevant)
+    rerank_scores = reranker.predict(pairs)
+
+    # Combine docs with their new scores and sort by rerank score (descending)
+    reranked = list(zip(docs_with_scores, rerank_scores))
+    reranked.sort(key=lambda x: x[1], reverse=True)
+
+    # Return top_k results with rerank score
+    results = [(doc, float(rerank_score)) for (doc, _), rerank_score in reranked[:top_k]]
+
+    return results
+
+
+def retrieve_context(query, k=5):
+    db = get_vector_db()
+
+    # Fetch more candidates for reranking
+    initial_results = db.similarity_search_with_score(query, k=k * 3)
+
+    # Filter by threshold first
+    filtered = [(doc, score) for doc, score in initial_results
+                if score <= RELEVANCE_THRESHOLD]
+
+    if not filtered:
+        return []
+
+    # Rerank the filtered results
+    reranked = rerank_results(query, filtered, top_k=k)
+
+    return reranked
 
 
 def format_retrieved_context(results):
@@ -117,13 +125,16 @@ if __name__ == "__main__":
     query = "What are the Basel III capital requirements?"
 
     print(f"Query: {query}\n")
+    print("Loading reranker model (first run may take a moment)...\n")
 
     results = retrieve_context(query, k=5)
     context, citations = format_retrieved_context(results)
 
-    print(f"Found {len(citations)} relevant chunks:\n")
+    print(f"Found {len(citations)} relevant chunks (reranked):\n")
     for i, cit in enumerate(citations, 1):
-        score_str = f" (relevance: {cit['score']:.3f})" if cit['score'] is not None else ""
+        score = cit['score']
+        # Higher rerank score = more relevant
+        score_str = f" (rerank score: {score:.3f})" if score is not None else ""
         print(f"{i}. {cit['source']} (page {cit['page']}){score_str}")
 
-    print(f"\nContext preview:\n{context[:300]}...")
+    print(f"\nContext preview:\n{context[:500]}...")

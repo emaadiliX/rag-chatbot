@@ -242,7 +242,7 @@ def handle_question(question):
         </div>
         """, unsafe_allow_html=True)
 
-        result = ask(question, k=k, use_mmr=True)
+        result = ask(question, k=k)
 
         answer_text = result.get("answer", IDK_FALLBACK)
         sources = result.get("sources", [])
