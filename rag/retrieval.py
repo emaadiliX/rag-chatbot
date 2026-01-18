@@ -1,5 +1,7 @@
 import os
 import re
+import zipfile
+import urllib.request
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -10,6 +12,35 @@ load_dotenv()
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "rag_docs"
 RELEVANCE_THRESHOLD = 1.0
+
+GDRIVE_FILE_ID = "1i10PzY9uhHwYtTBaXCsT_EQ61U3FbNrs"
+
+
+def download_chroma_db():
+    """Download and extract ChromaDB from Google Drive if not present locally."""
+    if os.path.exists(CHROMA_PATH) and os.listdir(CHROMA_PATH):
+        return
+
+    print("Downloading vector database from Google Drive...")
+    zip_path = "chroma_db.zip"
+
+    try:
+        import gdown
+        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+        gdown.download(url, zip_path, quiet=False)
+
+        print("Extracting database...")
+        os.makedirs(CHROMA_PATH, exist_ok=True)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(CHROMA_PATH)
+
+        os.remove(zip_path)
+        print("Vector database ready.")
+    except Exception as e:
+        print(f"Failed to download database: {e}")
+        raise FileNotFoundError(
+            f"Could not download vector database. Error: {e}"
+        )
 
 UNSAFE_PATTERNS = [
     r"ignore (all|any|previous|above) instructions",
@@ -38,11 +69,8 @@ def get_vector_db():
     global _cached_db
 
     if _cached_db is None:
-        if not os.path.exists(CHROMA_PATH):
-            raise FileNotFoundError(
-                f"Vector database not found at {CHROMA_PATH}. "
-                "Run indexing.py first."
-            )
+        if not os.path.exists(CHROMA_PATH) or not os.listdir(CHROMA_PATH):
+            download_chroma_db()
 
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         _cached_db = Chroma(

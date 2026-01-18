@@ -10,7 +10,7 @@ from app.styles import CUSTOM_CSS  # noqa: E402
 from app.source_links import PDF_URLS  # noqa: E402
 
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource(show_spinner="Loading knowledge base...")
 def warm_up_models():
     try:
         get_vector_db()

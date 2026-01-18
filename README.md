@@ -63,6 +63,6 @@ streamlit run app/main.py
 Cited page numbers reflect PDF page positions, which may differ by a few pages
 from printed page numbers in some documents.
 
-## Note on Repository Size
+## Note on Vector Database
 
-The `chroma_db/` and `data/` folders are included to enable immediate deployment on Streamlit Cloud without re-indexing. In a production setting, these would typically be in `.gitignore` with a separate data pipeline.
+The vector database (`chroma_db/`) is hosted on Google Drive and downloaded automatically on first run. This keeps the repository size small while enabling fast deployment on Streamlit Cloud without re-indexing.
