@@ -30,6 +30,10 @@ CUSTOM_CSS = """
         background: var(--main-bg);
     }
 
+    .stMainBlockContainer {
+        padding: 0 4rem !important;
+    }
+
     .main .block-container {
         max-width: 1200px;
         padding: 1rem 2rem;
@@ -43,10 +47,6 @@ CUSTOM_CSS = """
     section[data-testid="stSidebar"] {
         background: var(--sidebar-bg);
         border-right: 1px solid var(--border-light);
-    }
-
-    section[data-testid="stSidebar"] > div:first-child {
-        padding: 2rem;
     }
 
     .sidebar-label {
@@ -126,7 +126,6 @@ CUSTOM_CSS = """
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 4rem 2rem 3rem 2rem;
         text-align: center;
     }
 
@@ -148,6 +147,12 @@ CUSTOM_CSS = """
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
+    }
+
+    .header-text{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
     .header-text h1 {
@@ -282,9 +287,11 @@ CUSTOM_CSS = """
 
     .assistant-message-content {
         padding: 1.5rem;
-        font-size: 0.8125rem;
-        line-height: 1.6;
-        color: var(--text-dark);
+        font-size: 16px !important;
+    }
+
+    .assistant-message-content * {
+        font-size: inherit !important;
     }
 
     .assistant-message-content strong {
@@ -486,13 +493,27 @@ CUSTOM_CSS = """
         gap: 0.75rem;
     }
 
-    /* Footer */
+    /* Bottom input area - pin the container with chat input + footer */
+    /* Use sticky instead of fixed so it respects the main content flow */
+    [data-testid="stMainBlockContainer"] > div > div:has(.stChatInput) {
+        position: sticky;
+        bottom: 0;
+        z-index: 1000;
+        background: var(--main-bg);
+        padding: 0.75rem 1rem 0 1rem !important;
+        margin-left: -1rem;
+        margin-right: -1rem;
+    }
+
+    /* Footer - sits naturally below chat input in DOM */
     .input-footer {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        margin-top: 1rem;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+        background: var(--main-bg);
     }
 
     .input-footer .material-symbols-outlined {
@@ -677,7 +698,11 @@ CUSTOM_CSS = """
         border: 1px solid var(--border-light) !important;
         background: white !important;
         box-shadow: 0 4px 20px rgba(181, 162, 217, 0.08) !important;
-        padding: 0.375rem 0.375rem 0.375rem 1.25rem !important;
+        padding: 10px 0;
+    }
+
+    .stElementContainer > div:first-child {
+        background-color: unset !important;
     }
 
     .stChatInput > div:focus-within {
@@ -722,7 +747,7 @@ CUSTOM_CSS = """
         min-width: 2.25rem !important;
         min-height: 2.25rem !important;
 
-        margin: 0 0 0 -0.25rem !important;
+        margin-right: 10px !important;
         padding: 0 !important;
 
         background: var(--primary) !important;
@@ -734,7 +759,6 @@ CUSTOM_CSS = """
 
     .stChatInput button svg {
         fill: white !important;
-        stroke: white !important;
         width: 1rem !important;
         height: 1rem !important;
         background: transparent !important;
@@ -800,7 +824,7 @@ CUSTOM_CSS = """
     }
     ::-webkit-scrollbar-track {
         background: transparent;
-    }
+    }cl
     ::-webkit-scrollbar-thumb {
         background: #eeeaf2;
         border-radius: 10px;

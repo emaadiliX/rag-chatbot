@@ -21,7 +21,7 @@ def warm_up_models():
 
 
 st.set_page_config(
-    page_title="FinWise RAG Chat",
+    page_title="FinWise Chat",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -103,9 +103,8 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <div class="header-row">
-        <div class="header-icon">🏦</div>
         <div class="header-text">
-            <h1>FinWise RAG Chat</h1>
+            <h1>FinWise Chat</h1>
             <p class="subtitle">Professional Financial Intelligence Assistant</p>
         </div>
     </div>
@@ -285,7 +284,7 @@ for msg in st.session_state.messages:
                     </div>
                     <span class="assistant-label">Assistant</span>
                 </div>
-                <div class="no-answer">🤷 {msg["content"]}</div>
+                <div class="no-answer"> {msg["content"]}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -313,7 +312,11 @@ if not st.session_state.messages:
                 st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
-user_input = st.chat_input("Analyze a document or ask a question...")
+
+# Use container so chat_input is inline (not auto-pinned), then pin via CSS
+with st.container():
+    user_input = st.chat_input("Analyze a document or ask a question...")
+
 st.markdown("""
 <div class="input-footer">
     <span class="material-symbols-outlined">verified_user</span>
