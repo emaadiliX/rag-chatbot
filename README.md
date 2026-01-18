@@ -62,3 +62,7 @@ streamlit run app/main.py
 
 Cited page numbers reflect PDF page positions, which may differ by a few pages
 from printed page numbers in some documents.
+
+## Note on Repository Size
+
+The `chroma_db/` and `data/` folders are included to enable immediate deployment on Streamlit Cloud without re-indexing. In a production setting, these would typically be in `.gitignore` with a separate data pipeline.
