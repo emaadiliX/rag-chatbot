@@ -512,6 +512,68 @@ CUSTOM_CSS = """
         background: transparent !important;
     }
 
+    /* Consistent typography for chat message content */
+    .stChatMessage [data-testid="stMarkdownContainer"],
+    .stChatMessage [data-testid="stMarkdownContainer"] p,
+    .stChatMessage [data-testid="stMarkdownContainer"] span,
+    .stChatMessage [data-testid="stMarkdownContainer"] li,
+    .stChatMessage [data-testid="stMarkdownContainer"] div {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        font-size: 0.8125rem !important;
+        line-height: 1.6 !important;
+        color: var(--text-dark) !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] strong,
+    .stChatMessage [data-testid="stMarkdownContainer"] b {
+        font-weight: 600 !important;
+        color: var(--text-dark) !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] ul,
+    .stChatMessage [data-testid="stMarkdownContainer"] ol {
+        margin: 0.75rem 0 !important;
+        padding-left: 1.25rem !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] li {
+        margin-bottom: 0.5rem !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] a {
+        color: var(--primary) !important;
+        text-decoration: none !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] a:hover {
+        text-decoration: underline !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] code {
+        font-size: 0.75rem !important;
+        background: var(--lavender-bubble) !important;
+        padding: 0.125rem 0.375rem !important;
+        border-radius: 0.25rem !important;
+        color: var(--text-dark) !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] pre {
+        background: var(--lavender-bubble) !important;
+        padding: 1rem !important;
+        border-radius: 0.5rem !important;
+        overflow-x: auto !important;
+    }
+
+    .stChatMessage [data-testid="stMarkdownContainer"] h1,
+    .stChatMessage [data-testid="stMarkdownContainer"] h2,
+    .stChatMessage [data-testid="stMarkdownContainer"] h3 {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        color: var(--text-dark) !important;
+        font-weight: 600 !important;
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
     /* Sources expander styling */
     .stExpander {
         border: none !important;
@@ -583,26 +645,34 @@ CUSTOM_CSS = """
         transform: scale(0.98) !important;
     }
 
-    /* Example buttons */
+    /* Example/suggested topic buttons */
     div[data-testid="column"] .stButton > button {
-        background: white !important;
+        background: transparent !important;
         border: 1px solid var(--border-light) !important;
-        border-radius: 0.75rem !important;
-        padding: 0.75rem 1.25rem !important;
-        font-size: 0.75rem !important;
+        border-radius: 2rem !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.6875rem !important;
         font-weight: 500 !important;
-        color: var(--text-dark) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+        color: var(--text-muted) !important;
+        box-shadow: none !important;
         height: auto !important;
+        min-height: unset !important;
+        line-height: 1.4 !important;
+        transition: all 0.15s ease !important;
     }
 
     div[data-testid="column"] .stButton > button:hover {
-        border-color: rgba(181, 162, 217, 0.4) !important;
-        transform: translateY(-1px) !important;
+        border-color: var(--primary) !important;
+        color: var(--primary) !important;
+        background: rgba(181, 162, 217, 0.05) !important;
+        transform: none !important;
     }
 
     /* Chat Input */
     .stChatInput > div {
+        display: flex !important;
+        align-items: center !important;       /* vertical centering */
+        gap: 0.5rem !important;
         border-radius: 1rem !important;
         border: 1px solid var(--border-light) !important;
         background: white !important;
@@ -617,6 +687,24 @@ CUSTOM_CSS = """
 
     .stChatInput input {
         font-size: 0.8125rem !important;
+        flex: 1 !important;
+        height: 2.5rem !important;
+        padding: 0 0.75rem !important;
+        line-height: 2.5rem !important;
+        border: none !important;
+        outline: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* Remove all inner borders from Streamlit's nested elements */
+    .stChatInput > div > div,
+    .stChatInput > div > div > div,
+    .stChatInput [data-baseweb],
+    .stChatInput [data-baseweb] > div {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
     }
 
     .stChatInput input::placeholder {
@@ -624,14 +712,61 @@ CUSTOM_CSS = """
     }
 
     .stChatInput button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        align-self: center !important;
+
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        min-width: 2.25rem !important;
+        min-height: 2.25rem !important;
+
+        margin: 0 0 0 -0.25rem !important;
+        padding: 0 !important;
+
         background: var(--primary) !important;
-        border-radius: 0.75rem !important;
-        width: 2.5rem !important;
-        height: 2.5rem !important;
+        border: none !important;
+        border-radius: 0.625rem !important;
+        flex-shrink: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .stChatInput button svg {
+        fill: white !important;
+        stroke: white !important;
+        width: 1rem !important;
+        height: 1rem !important;
+        background: transparent !important;
+    }
+
+    /* Remove white square/background from button inner elements */
+    .stChatInput button *,
+    .stChatInput button > div,
+    .stChatInput button > span,
+    .stChatInput button::before,
+    .stChatInput button::after,
+    .stChatInput button [data-testid],
+    .stChatInput button div[class],
+    .stChatInput button span[class] {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
     .stChatInput button:hover {
         background: rgba(181, 162, 217, 0.9) !important;
+    }
+
+    .stChatInput textarea {
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .stChatInput button:focus {
+        outline: 2px solid rgba(181, 162, 217, 0.5) !important;
+        outline-offset: 2px !important;
     }
 
     /* Divider */
@@ -648,12 +783,7 @@ CUSTOM_CSS = """
         display: none !important;
     }
 
-    /* Expander styling */
-    .stExpander {
-        border: none !important;
-        background: transparent !important;
-    }
-
+    /* Expander details styling (extends rules at line 516) */
     .stExpander > details > summary {
         padding: 0 !important;
         background: transparent !important;

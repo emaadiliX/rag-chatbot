@@ -135,6 +135,12 @@ def expand_query(question, chat_history):
         r"\b(it|its|this|that|these|those|they|them)\b",
         r"^(what|how|why|tell me) (about|more)",
         r"^(and|also|additionally)\b",
+        r"^explain",
+        r"^elaborate",
+        r"^more (details|info)",
+        r"^go (on|deeper)",
+        r"^continue",
+        r"^can you (explain|elaborate|expand)",
     ]
 
     is_followup = any(re.search(p, question.lower())
