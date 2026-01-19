@@ -10,7 +10,7 @@ from app.styles import CUSTOM_CSS  # noqa: E402
 from app.source_links import PDF_URLS  # noqa: E402
 
 
-@st.cache_resource(show_spinner="Loading knowledge base...")
+@st.cache_resource(show_spinner=False)
 def warm_up_models():
     try:
         get_vector_db()
@@ -313,7 +313,6 @@ if not st.session_state.messages:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Use container so chat_input is inline (not auto-pinned), then pin via CSS
 with st.container():
     user_input = st.chat_input("Analyze a document or ask a question...")
 

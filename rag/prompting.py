@@ -172,7 +172,10 @@ def ask(question, k=5, chat_history=None):
         }
 
     search_query = expand_query(question, chat_history)
-    results = retrieve_context(search_query, k=k)
+
+    # fetch more docs for "go on" / "elaborate" type requests
+    elaboration = re.search(r"^(go on|continue|elaborate|tell me more|more\b)", question.lower().strip())
+    results = retrieve_context(search_query, k=k + 3 if elaboration else k)
     if not results:
         return {"answer": IDK_FALLBACK, "sources": [], "citations": [], "num_sources": 0}
 

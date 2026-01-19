@@ -184,7 +184,7 @@ CUSTOM_CSS = """
     .chat-container {
         max-width: 48rem;
         margin: 0 auto;
-        padding-bottom: 1rem;
+        padding-bottom: 7.5rem !important;
     }
 
     /* User Message */
@@ -292,6 +292,7 @@ CUSTOM_CSS = """
 
     .assistant-message-content * {
         font-size: inherit !important;
+        color: black;
     }
 
     .assistant-message-content strong {
@@ -469,6 +470,7 @@ CUSTOM_CSS = """
     .source-card a {
         color: inherit;
         text-decoration: none;
+        color: black !important;
     }
 
     /* Examples Section */
@@ -493,17 +495,15 @@ CUSTOM_CSS = """
         gap: 0.75rem;
     }
 
-    /* Bottom input area - pin the container with chat input + footer */
-    /* Use sticky instead of fixed so it respects the main content flow */
-    [data-testid="stMainBlockContainer"] > div > div:has(.stChatInput) {
-        position: sticky;
-        bottom: 0;
-        z-index: 1000;
-        background: var(--main-bg);
-        padding: 0.75rem 1rem 0 1rem !important;
-        margin-left: -1rem;
-        margin-right: -1rem;
-    }
+    # [data-testid="stMainBlockContainer"] > div > div:has(.stChatInput) {
+    #     position: sticky;
+    #     bottom: 0;
+    #     z-index: 1000;
+    #     background: var(--main-bg);
+    #     padding: 0.75rem 1rem 0 1rem !important;
+    #     margin-left: -1rem;
+    #     margin-right: -1rem;
+    # }
 
     /* Footer - sits naturally below chat input in DOM */
     .input-footer {
@@ -824,7 +824,7 @@ CUSTOM_CSS = """
     }
     ::-webkit-scrollbar-track {
         background: transparent;
-    }cl
+    }
     ::-webkit-scrollbar-thumb {
         background: #eeeaf2;
         border-radius: 10px;
@@ -832,5 +832,7 @@ CUSTOM_CSS = """
     ::-webkit-scrollbar-thumb:hover {
         background: #dcd4e8;
     }
+
+
 </style>
 """
